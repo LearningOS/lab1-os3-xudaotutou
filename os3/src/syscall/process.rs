@@ -46,20 +46,17 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 
 /// YOUR JOB: Finish sys_task_info to pass testcases
 pub fn sys_task_info(ti: *mut TaskInfo) -> isize {
-    println!("invoke");
-    let inner = TASK_MANAGER.inner.exclusive_access();
-    let cur_task_block = inner.tasks[inner.current_task];
+    let cur_task_block = TASK_MANAGER.cur_task();
+    let syscall_times: [u32; MAX_SYSCALL_NUM] = cur_task_block.syscall_times;
     let status = cur_task_block.task_status;
-    println!(">");
     let time = get_time_us() - cur_task_block.start_time;
-    let syscall_times: [u32; MAX_SYSCALL_NUM] = cur_task_block.syscall_times.clone();
-
-    unsafe {*ti = TaskInfo {
-        status,
-        syscall_times,
-        time,
-    };}
+    unsafe {
+        *ti = TaskInfo {
+            status,
+            syscall_times,
+            time,
+        };
+    }
     println!("<");
-    drop(inner);
     0
 }

@@ -14,11 +14,7 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 mod manager;
-use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
-use crate::loader::{get_num_app, init_app_cx};
-use crate::sync::UPSafeCell;
-use crate::task::manager::{TaskManager, TaskManagerInner};
-use crate::timer::{get_time, get_time_us};
+use crate::task::manager::TaskManager;
 use lazy_static::*;
 pub(crate) use switch::__switch;
 pub(crate) use task::{TaskControlBlock, TaskStatus};
@@ -28,28 +24,7 @@ pub(crate) use context::TaskContext;
 
 lazy_static! {
     /// a `TaskManager` instance through lazy_static!
-    pub static ref TASK_MANAGER: TaskManager = {
-        let num_app = get_num_app();
-        let mut tasks = [TaskControlBlock {
-            task_cx: TaskContext::zero_init(),
-            task_status: TaskStatus::UnInit,
-            start_time: get_time_us(),
-            syscall_times: [0;MAX_SYSCALL_NUM]
-        }; MAX_APP_NUM];
-        for (i, t) in tasks.iter_mut().enumerate().take(num_app) {
-            t.task_cx = TaskContext::goto_restore(init_app_cx(i));
-            t.task_status = TaskStatus::Ready;
-        }
-        TaskManager {
-            num_app,
-            inner: unsafe {
-                UPSafeCell::new(TaskManagerInner {
-                    tasks,
-                    current_task: 0,
-                })
-            },
-        }
-    };
+    pub static ref TASK_MANAGER: TaskManager = TaskManager::new();
 }
 
 /// Run the first task in task list.
