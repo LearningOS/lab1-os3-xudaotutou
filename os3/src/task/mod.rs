@@ -14,12 +14,16 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 mod manager;
+// use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
+// use crate::loader::{get_num_app, init_app_cx};
+// use crate::sync::UPSafeCell;
+use crate::syscall::process::TaskInfo;
 use crate::task::manager::TaskManager;
 use lazy_static::*;
-pub(crate) use switch::__switch;
-pub(crate) use task::{TaskControlBlock, TaskStatus};
+pub use switch::__switch;
+pub use task::{TaskControlBlock, TaskStatus};
 
-pub(crate) use context::TaskContext;
+pub use context::TaskContext;
 
 
 lazy_static! {
@@ -60,5 +64,11 @@ pub fn exit_current_and_run_next() {
     run_next_task();
 }
 
+pub fn task_info()->TaskInfo{
+    TASK_MANAGER.get_task_info()
+}
 // LAB1: Public functions implemented here provide interfaces.
+pub fn update_syscall_times(syscall_id:usize){
+    TASK_MANAGER.update_syscall_times(syscall_id);
+}
 // You may use TASK_MANAGER member functions to handle requests.

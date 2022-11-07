@@ -9,9 +9,9 @@ use super::TaskContext;
 pub struct TaskControlBlock {
     pub task_status: TaskStatus,
     pub task_cx: TaskContext,
-    // pub task_time: usize,
-    pub start_time:usize,
-    pub syscall_times: [u32; MAX_SYSCALL_NUM]
+    pub start_time: usize,
+    pub syscall_times: [u32;MAX_SYSCALL_NUM]
+    // LAB1: Add whatever you need about the Task.
 }
 
 #[derive(Copy, Clone, PartialEq)]

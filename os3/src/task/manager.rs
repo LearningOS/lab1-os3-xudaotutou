@@ -2,6 +2,7 @@ use crate::{
     config::{MAX_APP_NUM, MAX_SYSCALL_NUM},
     loader::{get_num_app, init_app_cx},
     sync::UPSafeCell,
+    syscall::process::TaskInfo,
     task::{TaskContext, TaskStatus, __switch},
     timer::get_time,
 };
@@ -83,7 +84,7 @@ impl TaskManager {
             let mut inner = self.inner.exclusive_access();
             let current = inner.current_task;
             inner.tasks[next].task_status = TaskStatus::Running;
-            
+
             if inner.tasks[next].start_time == 0 {
                 inner.tasks[next].start_time = get_time();
             }
@@ -123,11 +124,21 @@ impl TaskManager {
         }
     }
     pub fn update_syscall_times(&self, syscall_id: usize) {
-        self.cur_task().syscall_times[syscall_id] += 1;
+        let inner = self.inner.exclusive_access();
+        let mut cur_task = inner.tasks[inner.current_task];
+        cur_task.syscall_times[syscall_id] += 1;
     }
-    pub fn cur_task(&self) -> TaskControlBlock {
+    fn cur_task(&self) -> TaskControlBlock {
         let inner = self.inner.exclusive_access();
         inner.tasks[inner.current_task].clone()
+    }
+    pub fn get_task_info(&self) -> TaskInfo {
+        let cur = self.cur_task();
+        TaskInfo {
+            status: TaskStatus::Running,
+            syscall_times: cur.syscall_times,
+            time: (get_time() - cur.start_time) / 1000,
+        }
     }
     // LAB1: Try to implement your function to update or get task info!
 }

@@ -17,17 +17,18 @@ const SYSCALL_GET_TIME: usize = 169;
 const SYSCALL_TASK_INFO: usize = 410;
 
 mod fs;
-mod process;
+pub(crate) mod process;
 
 use fs::*;
 use process::*;
 
-use crate::{config::MAX_SYSCALL_NUM, task::TASK_MANAGER};
+use crate::{config::MAX_SYSCALL_NUM, task::update_syscall_times};
 
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
-    if syscall_id < MAX_SYSCALL_NUM {
-        TASK_MANAGER.update_syscall_times(syscall_id);
+    // LAB1: You may need to update syscall info here.
+    if syscall_id < MAX_SYSCALL_NUM{
+        update_syscall_times(syscall_id);
     }
     match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
