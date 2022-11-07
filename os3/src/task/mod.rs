@@ -33,8 +33,8 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
-            task_time:0usize,
-            start_time: get_time_us()
+            start_time: get_time_us(),
+            syscall_times: [0;MAX_SYSCALL_NUM]
         }; MAX_APP_NUM];
         for (i, t) in tasks.iter_mut().enumerate().take(num_app) {
             t.task_cx = TaskContext::goto_restore(init_app_cx(i));

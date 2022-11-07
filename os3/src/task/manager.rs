@@ -1,4 +1,4 @@
-use crate::{sync::UPSafeCell, config::MAX_APP_NUM, task::{TaskStatus, TaskContext, __switch}, timer::get_time_us};
+use crate::{sync::UPSafeCell, config::MAX_APP_NUM, task::{TaskStatus, TaskContext, __switch}};
 
 use super::TaskControlBlock;
 /// The task manager, where all the tasks are managed.
@@ -35,9 +35,6 @@ impl TaskManager {
       let mut inner = self.inner.exclusive_access();
       let task0 = &mut inner.tasks[0];
       task0.task_status = TaskStatus::Running;
-      // init call time
-      task0.start_time = get_time_us();
-      task0.task_time += 1;
       let next_task_cx_ptr = &task0.task_cx as *const TaskContext;
       drop(inner);
       let mut _unused = TaskContext::zero_init();
@@ -80,7 +77,7 @@ impl TaskManager {
           let mut inner = self.inner.exclusive_access();
           let current = inner.current_task;
           inner.tasks[next].task_status = TaskStatus::Running;
-          inner.tasks[next].task_time += 1;
+        //   inner.tasks[next].task_time += 1;
           inner.current_task = next;
           let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
           let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
