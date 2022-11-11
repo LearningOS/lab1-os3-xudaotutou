@@ -28,6 +28,9 @@ use crate::{config::MAX_SYSCALL_NUM, task::update_syscall_times};
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     // LAB1: You may need to update syscall info here.
     if syscall_id < MAX_SYSCALL_NUM{
+        
+        // if  syscall_id == SYSCALL_WRITE{println!("call,{}",syscall_id);}
+        // if  syscall_id == SYSCALL_WRITE{println!("call,{}",syscall_id);}
         update_syscall_times(syscall_id);
     }
     match syscall_id {

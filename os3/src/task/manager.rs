@@ -4,10 +4,12 @@ use crate::{
     sync::UPSafeCell,
     syscall::process::TaskInfo,
     task::{TaskContext, TaskStatus, __switch},
-    timer::get_time,
+    timer::{get_time, get_time_us},
 };
 
 use super::TaskControlBlock;
+use alloc::vec;
+use alloc::vec::Vec;
 /// The task manager, where all the tasks are managed.
 ///
 /// Functions implemented on `TaskManager` deals with all task state transitions
@@ -27,7 +29,7 @@ pub struct TaskManager {
 /// The task manager inner in 'UPSafeCell'
 pub struct TaskManagerInner {
     /// task list
-    pub tasks: [TaskControlBlock; MAX_APP_NUM],
+    pub tasks: Vec<TaskControlBlock>,
     /// id of current `Running` task
     pub current_task: usize,
 }
@@ -41,7 +43,7 @@ impl TaskManager {
         let mut inner = self.inner.exclusive_access();
         let task0 = &mut inner.tasks[0];
         task0.task_status = TaskStatus::Running;
-        task0.start_time = get_time();
+        Self::set_task_time(task0);
         let next_task_cx_ptr = &task0.task_cx as *const TaskContext;
         drop(inner);
         let mut _unused = TaskContext::zero_init();
@@ -85,9 +87,7 @@ impl TaskManager {
             let current = inner.current_task;
             inner.tasks[next].task_status = TaskStatus::Running;
 
-            if inner.tasks[next].start_time == 0 {
-                inner.tasks[next].start_time = get_time();
-            }
+            Self::set_task_time(&mut inner.tasks[next]);
             inner.current_task = next;
             let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
             let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
@@ -103,16 +103,23 @@ impl TaskManager {
     }
     pub fn new() -> Self {
         let num_app = get_num_app();
-        let mut tasks = [TaskControlBlock {
-            task_cx: TaskContext::zero_init(),
-            task_status: TaskStatus::UnInit,
-            start_time: 0,
-            syscall_times: [0; MAX_SYSCALL_NUM],
-        }; MAX_APP_NUM];
-        for (i, t) in tasks.iter_mut().enumerate().take(num_app) {
-            t.task_cx = TaskContext::goto_restore(init_app_cx(i));
-            t.task_status = TaskStatus::Ready;
-        }
+        let mut tasks = vec![
+            TaskControlBlock {
+                task_cx: TaskContext::zero_init(),
+                task_status: TaskStatus::UnInit,
+                start_time: 0,
+                syscall_times: [0; MAX_SYSCALL_NUM],
+            };
+            MAX_APP_NUM
+        ];
+        tasks
+            .iter_mut()
+            .enumerate()
+            .take(num_app)
+            .for_each(|(i, t)| {
+                t.task_cx = TaskContext::goto_restore(init_app_cx(i));
+                t.task_status = TaskStatus::Ready;
+            });
         TaskManager {
             num_app,
             inner: unsafe {
@@ -124,20 +131,23 @@ impl TaskManager {
         }
     }
     pub fn update_syscall_times(&self, syscall_id: usize) {
-        let inner = self.inner.exclusive_access();
-        let mut cur_task = inner.tasks[inner.current_task];
-        cur_task.syscall_times[syscall_id] += 1;
+        let mut inner = self.inner.exclusive_access();
+        let cur = inner.current_task;
+        inner.tasks[cur].syscall_times[syscall_id] += 1;
     }
-    fn cur_task(&self) -> TaskControlBlock {
-        let inner = self.inner.exclusive_access();
-        inner.tasks[inner.current_task].clone()
-    }
+
     pub fn get_task_info(&self) -> TaskInfo {
-        let cur = self.cur_task();
+        let inner = self.inner.exclusive_access();
+        let cur = &inner.tasks[inner.current_task];
         TaskInfo {
             status: TaskStatus::Running,
             syscall_times: cur.syscall_times,
-            time: (get_time() - cur.start_time) / 1000,
+            time: (get_time_us() - cur.start_time) / 1000,
+        }
+    }
+    fn set_task_time(cur: &mut TaskControlBlock) {
+        if cur.start_time == 0 {
+            cur.start_time = get_time_us();
         }
     }
     // LAB1: Try to implement your function to update or get task info!
